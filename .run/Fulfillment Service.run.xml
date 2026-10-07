@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Fulfillment Service" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="fulfillment-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.fulfillmesh.fulfillment.FulfillmentServiceApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

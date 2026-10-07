@@ -1,0 +1,151 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fulfillmesh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fulfillmesh}
+      POSTGRES_DB: ${POSTGRES_DB:-fulfillmesh}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fulfillmesh} -d ${POSTGRES_DB:-fulfillmesh}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: confluentinc/cp-kafka:7.8.0
+    hostname: kafka
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+
+  order-service:
+    build:
+      context: .
+      args:
+        MODULE: order-service
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/fulfillmesh?currentSchema=orders
+      POSTGRES_USER: ${POSTGRES_USER:-fulfillmesh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fulfillmesh}
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-that-is-at-least-32-characters-long}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@fulfillmesh.local}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-demo12345}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@fulfillmesh.local}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-admin12345}
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  inventory-service:
+    build:
+      context: .
+      args:
+        MODULE: inventory-service
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/fulfillmesh?currentSchema=inventory
+      POSTGRES_USER: ${POSTGRES_USER:-fulfillmesh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fulfillmesh}
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-that-is-at-least-32-characters-long}
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  fulfillment-service:
+    build:
+      context: .
+      args:
+        MODULE: fulfillment-service
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/fulfillmesh?currentSchema=fulfillment
+      POSTGRES_USER: ${POSTGRES_USER:-fulfillmesh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fulfillmesh}
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-that-is-at-least-32-characters-long}
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  shipping-service:
+    build:
+      context: .
+      args:
+        MODULE: shipping-service
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/fulfillmesh?currentSchema=shipping
+      POSTGRES_USER: ${POSTGRES_USER:-fulfillmesh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fulfillmesh}
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-that-is-at-least-32-characters-long}
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,18 @@
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Maven
+**/target/
+
+# Local environment
+.env
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Local data
+tmp/

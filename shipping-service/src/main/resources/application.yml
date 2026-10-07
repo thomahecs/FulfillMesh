@@ -1,0 +1,45 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: shipping-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fulfillmesh?currentSchema=shipping}
+    username: ${POSTGRES_USER:fulfillmesh}
+    password: ${POSTGRES_PASSWORD:fulfillmesh}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    schemas: shipping
+    default-schema: shipping
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.fulfillmesh.common.events"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  kafka:
+    group-id: shipping-service
+  jwt:
+    secret: ${JWT_SECRET:local-development-secret-that-is-at-least-32-characters-long}

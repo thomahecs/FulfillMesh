@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Shipping Service" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="shipping-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.fulfillmesh.shipping.ShippingServiceApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

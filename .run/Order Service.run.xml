@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Order Service" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="order-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.fulfillmesh.order.OrderServiceApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

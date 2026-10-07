@@ -1,0 +1,89 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.8.0
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+  order-service:
+    build:
+      context: ../..
+      args:
+        MODULE: order-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${ORDER_DATABASE_URL}
+      POSTGRES_USER: ${RDS_USERNAME}
+      POSTGRES_PASSWORD: ${RDS_PASSWORD}
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD}
+    ports: ["8081:8081"]
+    depends_on: [redis, kafka]
+
+  inventory-service:
+    build:
+      context: ../..
+      args:
+        MODULE: inventory-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${INVENTORY_DATABASE_URL}
+      POSTGRES_USER: ${RDS_USERNAME}
+      POSTGRES_PASSWORD: ${RDS_PASSWORD}
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET}
+    ports: ["8082:8082"]
+    depends_on: [redis, kafka]
+
+  fulfillment-service:
+    build:
+      context: ../..
+      args:
+        MODULE: fulfillment-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${FULFILLMENT_DATABASE_URL}
+      POSTGRES_USER: ${RDS_USERNAME}
+      POSTGRES_PASSWORD: ${RDS_PASSWORD}
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET}
+    ports: ["8083:8083"]
+    depends_on: [redis, kafka]
+
+  shipping-service:
+    build:
+      context: ../..
+      args:
+        MODULE: shipping-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${SHIPPING_DATABASE_URL}
+      POSTGRES_USER: ${RDS_USERNAME}
+      POSTGRES_PASSWORD: ${RDS_PASSWORD}
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET}
+    ports: ["8084:8084"]
+    depends_on: [redis, kafka]

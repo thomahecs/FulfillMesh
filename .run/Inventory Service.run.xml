@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Inventory Service" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="inventory-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.fulfillmesh.inventory.InventoryServiceApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

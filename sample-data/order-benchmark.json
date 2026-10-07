@@ -1,0 +1,12 @@
+{
+  "items": [
+    {"sku": "SKU-A", "quantity": 1},
+    {"sku": "SKU-B", "quantity": 1},
+    {"sku": "SKU-C", "quantity": 1},
+    {"sku": "SKU-D", "quantity": 1},
+    {"sku": "SKU-E", "quantity": 1},
+    {"sku": "SKU-F", "quantity": 1},
+    {"sku": "SKU-G", "quantity": 1},
+    {"sku": "SKU-H", "quantity": 1}
+  ]
+}
