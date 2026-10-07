@@ -98,4 +98,39 @@ class OrderApplicationServiceTest {
         );
         verify(redis).delete("idem:order:student@example.com:req-2");
     }
+    @Test
+    void listsOnlyCustomerOrdersForRegularUser() {
+        OrderEntity mine = new OrderEntity(UUID.randomUUID(), "student@example.com", java.time.Instant.now());
+        mine.addLine("SKU-A", 1);
+        when(orders.findAllByCustomerEmailOrderByCreatedAtDesc("student@example.com")).thenReturn(List.of(mine));
+
+        var result = service.listOrders("student@example.com", false);
+
+        assertEquals(1, result.size());
+        assertEquals("student@example.com", result.getFirst().customerEmail());
+        verify(orders, never()).findAllByOrderByCreatedAtDesc();
+    }
+
+    @Test
+    void listsAllOrdersForAdmin() {
+        OrderEntity first = new OrderEntity(UUID.randomUUID(), "one@example.com", java.time.Instant.now());
+        OrderEntity second = new OrderEntity(UUID.randomUUID(), "two@example.com", java.time.Instant.now());
+        when(orders.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(first, second));
+
+        var result = service.listOrders("admin@example.com", true);
+
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void adminCanReadAnyOrderById() {
+        UUID id = UUID.randomUUID();
+        OrderEntity order = new OrderEntity(id, "customer@example.com", java.time.Instant.now());
+        when(orders.findById(id)).thenReturn(Optional.of(order));
+
+        var result = service.getOrder(id, "admin@example.com", true);
+
+        assertEquals("customer@example.com", result.customerEmail());
+    }
+
 }

@@ -92,6 +92,23 @@ public class OrderApplicationService {
         return toView(order);
     }
 
+    @Transactional(readOnly = true)
+    public OrderView getOrder(UUID id, String customerEmail, boolean admin) {
+        OrderEntity order = admin
+                ? orders.findById(id).orElseThrow(() -> new IllegalArgumentException("Order not found"))
+                : orders.findByIdAndCustomerEmail(id, customerEmail)
+                        .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        return toView(order);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderView> listOrders(String customerEmail, boolean admin) {
+        List<OrderEntity> result = admin
+                ? orders.findAllByOrderByCreatedAtDesc()
+                : orders.findAllByCustomerEmailOrderByCreatedAtDesc(customerEmail);
+        return result.stream().map(OrderApplicationService::toView).toList();
+    }
+
     private void validateNoDuplicateSkus(CreateOrderRequest request) {
         Set<String> seen = new HashSet<>();
         for (CreateOrderLineRequest item : request.items()) {

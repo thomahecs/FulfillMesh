@@ -6,6 +6,7 @@ import com.fulfillmesh.shipping.repository.ShipmentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,6 +21,17 @@ public class ShippingQueryService {
     public ShipmentView byOrderId(UUID orderId) {
         Shipment shipment = shipments.findByOrderId(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        return toView(shipment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShipmentView> all() {
+        return shipments.findAllByOrderByCreatedAtDesc().stream()
+                .map(ShippingQueryService::toView)
+                .toList();
+    }
+
+    private static ShipmentView toView(Shipment shipment) {
         return new ShipmentView(
                 shipment.getId(),
                 shipment.getOrderId(),

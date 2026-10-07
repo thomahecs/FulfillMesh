@@ -16,3 +16,14 @@ logs/
 
 # Local data
 tmp/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env.local
+
+# TypeScript build artifacts
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts

@@ -5,6 +5,7 @@ import com.fulfillmesh.shipping.repository.ShipmentRepository;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,4 +32,16 @@ class ShippingQueryServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> service.byOrderId(orderId));
     }
+    @Test
+    void listsShipments() {
+        UUID orderId = UUID.randomUUID();
+        Shipment shipment = new Shipment(UUID.randomUUID(), orderId, "FM-LIST", Instant.now());
+        when(repository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(shipment));
+
+        var result = service.all();
+
+        assertEquals(1, result.size());
+        assertEquals("FM-LIST", result.getFirst().trackingNumber());
+    }
+
 }

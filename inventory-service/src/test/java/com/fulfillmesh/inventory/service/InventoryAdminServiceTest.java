@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -38,4 +39,24 @@ class InventoryAdminServiceTest {
         assertEquals("New", result.name());
         assertEquals(8, result.availableQuantity());
     }
+    @Test
+    void deletesUnreservedInventory() {
+        InventoryItem item = new InventoryItem("SKU-X", "Delete Me", 4, 1, 1);
+        when(repository.findById("SKU-X")).thenReturn(Optional.of(item));
+
+        service.delete("sku-x");
+
+        verify(repository).delete(item);
+    }
+
+    @Test
+    void refusesToDeleteReservedInventory() {
+        InventoryItem item = new InventoryItem("SKU-X", "Reserved", 4, 1, 1);
+        item.reserve(1);
+        when(repository.findById("SKU-X")).thenReturn(Optional.of(item));
+
+        assertThrows(IllegalStateException.class, () -> service.delete("sku-x"));
+        verify(repository, never()).delete(any(InventoryItem.class));
+    }
+
 }

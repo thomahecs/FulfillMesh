@@ -25,6 +25,17 @@ public class InventoryAdminService {
     }
 
     @Transactional
+    public void delete(String rawSku) {
+        String sku = rawSku.trim().toUpperCase();
+        InventoryItem item = inventory.findById(sku)
+                .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
+        if (item.getReservedQuantity() > 0) {
+            throw new IllegalStateException("Cannot delete inventory that still has reserved units");
+        }
+        inventory.delete(item);
+    }
+
+    @Transactional
     public InventoryView upsert(String rawSku, UpsertInventoryRequest request) {
         String sku = rawSku.trim().toUpperCase();
         InventoryItem item = inventory.findById(sku)

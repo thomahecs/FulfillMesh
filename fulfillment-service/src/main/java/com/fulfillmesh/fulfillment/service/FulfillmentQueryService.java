@@ -6,6 +6,7 @@ import com.fulfillmesh.fulfillment.repository.FulfillmentTaskRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,6 +21,17 @@ public class FulfillmentQueryService {
     public FulfillmentView byOrderId(UUID orderId) {
         FulfillmentTask task = tasks.findByOrderId(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Fulfillment task not found"));
+        return toView(task);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FulfillmentView> all() {
+        return tasks.findAllByOrderByCreatedAtDesc().stream()
+                .map(FulfillmentQueryService::toView)
+                .toList();
+    }
+
+    private static FulfillmentView toView(FulfillmentTask task) {
         return new FulfillmentView(
                 task.getId(),
                 task.getOrderId(),

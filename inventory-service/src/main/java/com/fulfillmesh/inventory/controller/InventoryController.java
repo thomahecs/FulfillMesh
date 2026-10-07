@@ -28,4 +28,10 @@ public class InventoryController {
     public InventoryView upsert(@PathVariable String sku, @Valid @RequestBody UpsertInventoryRequest request) {
         return service.upsert(sku, request);
     }
+
+    @DeleteMapping("/{sku}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void delete(@PathVariable String sku) {
+        service.delete(sku);
+    }
 }

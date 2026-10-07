@@ -1,12 +1,12 @@
 # FulfillMesh
 
-FulfillMesh is a small distributed backend for order fulfillment. I built it around a normal warehouse flow: an order comes in, stock is reserved, a pick route is planned, and a shipment is created. The services do not call each other directly for the workflow. They pass events through Kafka instead.
+FulfillMesh is a distributed order-fulfillment platform with a Spring Boot service mesh and a React operations console. I built it around a normal warehouse flow: an order comes in, stock is reserved, a pick route is planned, and a shipment is created. The services do not call each other directly for the workflow. They pass events through Kafka instead.
 
 The project is intentionally runnable on one laptop. PostgreSQL, Redis, and Kafka run in Docker, while the four Spring Boot services can either run from IntelliJ or from Docker too.
 
 ## Stack
 
-Java 21, Spring Boot, PostgreSQL, JPA/Hibernate, Redis, Apache Kafka, Spring Security, JWT, Docker, JUnit 5, Testcontainers, JaCoCo.
+Java 21, Spring Boot, PostgreSQL, JPA/Hibernate, Redis, Apache Kafka, Spring Security, JWT, React, TypeScript, Vite, Docker, JUnit 5, Testcontainers, JaCoCo.
 
 ## Services
 
@@ -17,6 +17,7 @@ Java 21, Spring Boot, PostgreSQL, JPA/Hibernate, Redis, Apache Kafka, Spring Sec
 | `fulfillment-service` | 8083 | picking task, A* warehouse routing |
 | `shipping-service` | 8084 | shipment creation and tracking number |
 | `platform-common` | - | shared events, topic names, JWT helper |
+| `frontend` | 5173 | React/TypeScript operations console |
 
 The local PostgreSQL instance has a separate schema for every service. This is not the same as giving every service its own database server, but it keeps table ownership separate without making the laptop setup annoying.
 
@@ -225,3 +226,60 @@ This is a portfolio-sized system, so there are a couple of deliberate limits:
 - Redis and Kafka run on the EC2 host in the sample AWS layout. A larger deployment would normally use managed or clustered infrastructure.
 
 More detail is in `docs/ARCHITECTURE.md` and `docs/RESUME_MAPPING.md`.
+
+## Web operations console
+
+The repository also includes a React + TypeScript operations console under `frontend/`. It is designed as a full control surface for the backend rather than a decorative landing page.
+
+The console includes:
+
+- login and registration with the existing JWT endpoints
+- role-aware operator/admin navigation
+- an order command center with idempotent order creation and live workflow polling
+- inventory cards with add, edit, and safe delete actions for admins
+- fulfillment task inspection with an interactive visualization of the stored A* pick route
+- shipping lookup and tracking cards
+- live health checks for all four Spring Boot services
+- a Kafka/service topology view
+- global search across orders, SKUs, and tracking data
+
+The layout uses a dense commerce/operations pattern: dark navigation, a central search bar, compact tables, strong blue hierarchy, and small warm accent colors for high-value actions.
+
+### Run the frontend
+
+Node.js 20+ is enough. No CORS changes are required because Vite proxies each API family to the correct local Spring service.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+Keep the existing local infrastructure and Spring services running:
+
+```text
+order-service       8081
+inventory-service   8082
+fulfillment-service 8083
+shipping-service    8084
+```
+
+For the richest view, use the seeded admin account:
+
+```text
+admin@fulfillmesh.local / admin12345
+```
+
+A regular user can still create and track their own orders and read inventory, while inventory mutation and fleet-wide fulfillment/shipment lists remain admin-only.
+
+Frontend production build:
+
+```bash
+make frontend-build
+```

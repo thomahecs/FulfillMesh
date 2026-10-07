@@ -1,4 +1,4 @@
-.PHONY: infra-up infra-down reset test coverage docker-up docker-down demo
+.PHONY: infra-up infra-down reset test coverage docker-up docker-down demo frontend-install frontend frontend-build
 
 infra-up:
 	./scripts/infra-up.sh
@@ -23,3 +23,12 @@ docker-down:
 
 demo:
 	./scripts/demo-flow.sh
+
+frontend-install:
+	cd frontend && npm install
+
+frontend:
+	cd frontend && npm run dev
+
+frontend-build:
+	cd frontend && npm run build
