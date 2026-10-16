@@ -30,7 +30,7 @@ services:
       retries: 20
 
   kafka:
-    image: confluentinc/cp-kafka:7.8.0
+    image: confluentinc/cp-kafka:7.8.11
     hostname: kafka
     ports:
       - "29092:29092"
@@ -66,6 +66,7 @@ services:
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-that-is-at-least-32-characters-long}
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx512m"
       DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@fulfillmesh.local}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-demo12345}
       DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@fulfillmesh.local}
@@ -92,6 +93,7 @@ services:
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-that-is-at-least-32-characters-long}
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx512m"
     ports:
       - "8082:8082"
     depends_on:
@@ -114,6 +116,7 @@ services:
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-that-is-at-least-32-characters-long}
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx512m"
     ports:
       - "8083:8083"
     depends_on:
@@ -136,6 +139,7 @@ services:
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-that-is-at-least-32-characters-long}
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx512m"
     ports:
       - "8084:8084"
     depends_on:
@@ -145,6 +149,17 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - order-service
+      - inventory-service
+      - fulfillment-service
+      - shipping-service
 
 volumes:
   postgres_data:

@@ -69,7 +69,7 @@ The shared event contracts are under:
 platform-common/src/main/java/com/fulfillmesh/common/events
 ```
 
-## A* route engine and 22% benchmark
+## A* route engine and 10,000-order benchmark
 
 Implementation:
 
@@ -79,13 +79,19 @@ Implementation:
 - `RoutingBenchmarkTest`
 - `docs/ROUTING_BENCHMARK.md`
 
-Deterministic result:
+Eight-item regression test: `102 -> 80` grid steps (21.57%).
 
-```text
-102 cells -> 80 cells
-21.5686% reduction
-22% rounded
-```
+Separate **10,000 generated orders** (18–22 walkable stops; seed 20261016):
+- A*-distance nearest neighbor: 1,255,014 grid steps
+- Sequential aisle-sorted: 1,865,602 grid steps
+- Optimized: 1,098,176 grid steps
+- Reduction vs nearest: **12.4969%**
+- Reduction vs sequential: **41.1356%**
+
+All figures come from `scripts/benchmark-routing.sh`, saved in
+`reports/routing-benchmark.json`. These are simulated grid steps, not
+measured warehouse operations. Detailed assumptions: `docs/ROUTING_BENCHMARK.md`.
+
 
 ## Spring Security + JWT
 
@@ -106,5 +112,15 @@ Implementation:
 - `order-service/.../InfrastructureSmokeTest.java` starts PostgreSQL, Redis, and Kafka containers
 - JaCoCo `coverage` Maven profile
 - `scripts/run-coverage.sh`
+- `inventory-service/.../ReservationLoadTest.java` (500 attempts / 100 units,
+  saves actual p95 latency)
+- `scripts/benchmark-concurrency.sh`
 
 The coverage profile is configured with an 85% line threshold for core logic and excludes configuration/security/DTO/entity/controller glue.
+
+## Evidence status (important)
+
+The 10,000-order A* result is checked in the editing environment.
+The new concurrency test, end-to-end Kafka flow, and post-edit JaCoCo gate
+require running on Docker/Maven and **are not yet certified**. Avoid treating
+unexecuted benchmark targets as measured results. See `docs/VERIFICATION.md`.

@@ -1,8 +1,8 @@
 # FulfillMesh
 
-FulfillMesh is a distributed order-fulfillment platform with a Spring Boot service mesh and a React operations console. I built it around a normal warehouse flow: an order comes in, stock is reserved, a pick route is planned, and a shipment is created. The services do not call each other directly for the workflow. They pass events through Kafka instead.
+FulfillMesh is a distributed order-fulfillment platform built with Spring Boot services and a React operations console. It follows a typical warehouse workflow: an order is placed, inventory is reserved, a picking route is planned, and a shipment is created. Kafka carries events between services, so the workflow does not depend on a chain of synchronous service-to-service calls.
 
-The project is intentionally runnable on one laptop. PostgreSQL, Redis, and Kafka run in Docker, while the four Spring Boot services can either run from IntelliJ or from Docker too.
+The whole project can run on a laptop. PostgreSQL, Redis, and Kafka run in Docker; the four Spring Boot services can run either in IntelliJ IDEA or in Docker.
 
 ## Stack
 
@@ -10,16 +10,16 @@ Java 21, Spring Boot, PostgreSQL, JPA/Hibernate, Redis, Apache Kafka, Spring Sec
 
 ## Services
 
-| Module | Port | Main job |
+| Module | Port | Responsibility |
 | --- | ---: | --- |
-| `order-service` | 8081 | login/register, create orders, order state |
-| `inventory-service` | 8082 | stock, row locking, reservations |
-| `fulfillment-service` | 8083 | picking task, A* warehouse routing |
-| `shipping-service` | 8084 | shipment creation and tracking number |
-| `platform-common` | - | shared events, topic names, JWT helper |
+| `order-service` | 8081 | Login/registration, order creation, order state |
+| `inventory-service` | 8082 | Stock management, row locking, reservations |
+| `fulfillment-service` | 8083 | Picking tasks, A* warehouse routing |
+| `shipping-service` | 8084 | Shipment creation and tracking numbers |
+| `platform-common` | - | Shared events, topic names, JWT helper |
 | `frontend` | 5173 | React/TypeScript operations console |
 
-The local PostgreSQL instance has a separate schema for every service. This is not the same as giving every service its own database server, but it keeps table ownership separate without making the laptop setup annoying.
+Each service owns a separate schema in the local PostgreSQL instance. This is not the same as running a dedicated database server for every service, but it separates table ownership without adding much overhead to local development.
 
 ## Main workflow
 
@@ -43,31 +43,56 @@ shipping-service
 order-service -> SHIPPED
 ```
 
-Kafka makes inventory, picking, and shipping independent workers. If one of them is temporarily down, the earlier service does not need to make a synchronous HTTP call to it.
+Kafka lets inventory, picking, and shipping process work independently. When a downstream service is temporarily unavailable, the previous service does not have to wait on a synchronous HTTP request.
 
 ## Concurrency and duplicate protection
 
-Inventory reservation uses PostgreSQL `PESSIMISTIC_WRITE` row locks. The service locks requested SKUs in sorted order, checks all quantities, and only then decrements stock. Two reservation workers cannot both read the same old quantity and oversell it.
+Inventory reservations use PostgreSQL `PESSIMISTIC_WRITE` row locks. The service locks the requested SKUs in a consistent sorted order, checks the quantities, and only then decrements stock. This prevents concurrent reservation workers from using the same available units twice.
 
-Order, inventory, fulfillment, and shipment entities also have Hibernate `@Version` fields. Those are used for optimistic version checks on normal state changes.
+Order, inventory, fulfillment, and shipment entities also have Hibernate `@Version` fields for optimistic version checks during state updates.
 
-Redis handles idempotency in two places. Order creation requires an `Idempotency-Key`, and Kafka consumers keep processed event ids with a TTL. Retried HTTP requests return the same order, and duplicate Kafka deliveries do not reserve or ship twice.
+Redis provides idempotency for both HTTP requests and Kafka consumers. Creating an order requires an `Idempotency-Key`; consumers store processed event IDs with a TTL. Retrying an HTTP request returns the existing order, while duplicate Kafka events do not trigger a second reservation or shipment.
 
 ## A* picking route
 
-The fulfillment service has a 20 x 20 warehouse grid with shelf cells that cannot be crossed. `AStarRouter` finds the shortest walkable path between two points.
+A* finds obstacle-aware paths through a 20 x 20 warehouse grid. For orders with up to 10 picking stops, the optimizer uses Held–Karp to find the best visit order. Larger orders start with nearest-neighbor and sequential routes, apply 2-opt improvements, and keep the shorter candidate.
 
-For a multi-item order, the baseline visits items in request order. The optimized planner repeatedly chooses the remaining item with the shortest A* path from the current position.
+The original deterministic eight-item test compares 102 grid steps for sequential picking with 80 for the optimized route.
 
-The fixed benchmark in `RoutingBenchmarkTest` is:
+A separate seeded benchmark generates 10,000 orders and can be rerun with:
 
-```text
-sequential route: 102 cells
-optimized route:   80 cells
-reduction:          21.5686% (22% rounded)
+```bash
+./scripts/benchmark-routing.sh
+cat reports/routing-benchmark.json
 ```
 
-This is backed by a deterministic test, not a number written only in the README.
+Across 10,000 generated orders containing 18–22 items each, total simulated walking distance was 12.4969% lower than nearest-neighbor and 41.1356% lower than sequential aisle-sorted picking. The benchmark setup and its limitations are documented in `docs/ROUTING_BENCHMARK.md`.
+
+## Fastest macOS launch: one Docker command
+
+Start Docker Desktop and, if possible, allocate 8–10 GB of RAM to Docker. From the repository root, run:
+
+```bash
+./scripts/local-up.sh
+```
+
+The script builds and starts PostgreSQL, Redis, Kafka, all four Spring Boot services, and the React frontend. Once the APIs are healthy, it also runs an end-to-end example order.
+
+Open **http://localhost:5173** when the script finishes. Use `demo@fulfillmesh.local` / `demo12345` to log in. This is a local demo account.
+
+To run the order-to-shipping example again:
+
+```bash
+./scripts/demo-flow.sh
+```
+
+For Java unit tests, PostgreSQL/Redis/Kafka integration tests, the JaCoCo coverage check, the 500-request concurrency check, and the frontend build, install JDK 21 and Maven 3.9+, then run:
+
+```bash
+./scripts/verify-all.sh
+```
+
+`docs/VERIFICATION.md` explains what each check covers and what it does not.
 
 ## Run on macOS with IntelliJ IDEA
 
@@ -78,34 +103,34 @@ You need:
 - IntelliJ IDEA
 - JDK 21
 - Docker Desktop
-- Maven 3.9+ if you want to run Maven from Terminal
+- Maven 3.9+ to run Maven commands from Terminal
 
-Homebrew commands:
+Install Java and Maven with Homebrew:
 
 ```bash
 brew install openjdk@21
 brew install maven
 ```
 
-Docker Desktop is installed separately from Docker's website. Start Docker Desktop before the next step.
+Install Docker Desktop separately from Docker's website and start it before bringing up the infrastructure.
 
 ### 2. Open the project
 
-Put the folder here if you are keeping it with the other career projects:
+If you keep your career projects on the Desktop, the folder can be located at:
 
 ```text
 ~/Desktop/CareerProject/FulfillMesh
 ```
 
-In IntelliJ, open the **FulfillMesh folder itself**. IntelliJ should detect the root `pom.xml` and import all Maven modules.
+Open the **FulfillMesh** folder in IntelliJ. It should detect the root `pom.xml` and import the Maven modules.
 
-Check:
+Check the project SDK:
 
 ```text
 File -> Project Structure -> Project SDK -> 21
 ```
 
-If Maven did not import automatically, open the Maven tool window and click **Reload All Maven Projects**.
+If the modules do not appear, open the Maven tool window and select **Reload All Maven Projects**.
 
 ### 3. Start PostgreSQL, Redis, and Kafka
 
@@ -117,9 +142,9 @@ cp .env.example .env
 docker compose ps
 ```
 
-Wait until PostgreSQL, Redis, and Kafka are healthy.
+Wait for PostgreSQL, Redis, and Kafka to become healthy.
 
-The default local connections are:
+Default local endpoints:
 
 ```text
 PostgreSQL: localhost:5432
@@ -138,52 +163,48 @@ com.fulfillmesh.fulfillment.FulfillmentServiceApplication
 com.fulfillmesh.shipping.ShippingServiceApplication
 ```
 
-Shared IntelliJ run configurations are also under `.run/`.
-
-The applications can start in any order after the three infrastructure containers are available.
+Shared IntelliJ run configurations are available in `.run/`. Once the infrastructure containers are ready, the Spring applications can start in any order.
 
 ### 5. Run a complete order
 
-The local database automatically seeds two accounts:
+The local database seeds two accounts:
 
 ```text
 user:  demo@fulfillmesh.local / demo12345
 admin: admin@fulfillmesh.local / admin12345
 ```
 
-They are local demo credentials only.
+These credentials are for local demos only.
 
-The easiest end-to-end test is:
+Run:
 
 ```bash
 ./scripts/demo-flow.sh
 ```
 
-It logs in, prints inventory, creates the eight-item benchmark order, waits for the Kafka workflow, then prints the picking result and shipment.
-
-You can also use `requests/FulfillMesh.http` from IntelliJ's HTTP client.
+The script logs in, displays inventory, creates the eight-item benchmark order, waits for the Kafka workflow, and prints the picking result and shipment. You can also send requests from IntelliJ using `requests/FulfillMesh.http`.
 
 ## Run everything in Docker
 
-Instead of running Java from IntelliJ:
+To run the Java services in Docker instead of IntelliJ:
 
 ```bash
 docker compose up -d --build
 ```
 
-Then:
+Then run the sample workflow:
 
 ```bash
 ./scripts/demo-flow.sh
 ```
 
-Stop it with:
+Stop the containers with:
 
 ```bash
 docker compose down
 ```
 
-Delete local database and Redis data with:
+To delete local PostgreSQL and Redis data:
 
 ```bash
 ./scripts/reset-local.sh
@@ -191,63 +212,69 @@ Delete local database and Redis data with:
 
 ## Tests
 
-Normal tests:
+Run the standard test suite:
 
 ```bash
 mvn clean test
 ```
 
-The project has unit tests for authentication, order idempotency, inventory reservation, shipping, A*, and route planning.
+Unit tests cover authentication, order idempotency, inventory reservations, shipping, A*, and route planning. The repository also includes a PostgreSQL load test with 500 reservation attempts against 100 units of stock.
 
-`InfrastructureSmokeTest` uses Testcontainers to start real PostgreSQL, Redis, and Kafka containers and checks all three integrations.
+The load test records p95 latency; it does not guarantee a particular result across machines. Run the benchmark and check its report before quoting a latency figure:
 
-Coverage:
+```bash
+./scripts/benchmark-concurrency.sh
+```
+
+`InfrastructureSmokeTest` uses Testcontainers with real PostgreSQL, Redis, and Kafka containers to check those integrations.
+
+To run the coverage check:
 
 ```bash
 ./scripts/run-coverage.sh
 ```
 
-The `coverage` Maven profile has an 85% line coverage gate for the core code. Configuration/security/DTO/entity/HTTP glue is excluded so the number measures the service and algorithm logic rather than generated-style boilerplate.
+The Maven `coverage` profile enforces an 85% line-coverage threshold for core code. Rerun it after code changes. Configuration, security, DTO, entity, and HTTP glue classes are excluded so the reported figure focuses on service and algorithm logic rather than boilerplate.
 
 ## AWS
 
-`deploy/aws/` contains an EC2 + RDS deployment layout and environment template.
+`deploy/aws/` contains an EC2 + RDS deployment layout and an environment template.
 
-I did not hard-code or automate account creation, IAM, VPC, EC2, or RDS provisioning because those steps need the owner's AWS account and can create charges. The application containers are prepared to use an RDS JDBC endpoint instead of the local PostgreSQL container. See `deploy/aws/README.md`.
+AWS account setup, IAM, VPC, EC2, and RDS provisioning are not automated or hard-coded; those steps require the owner's AWS account and may incur charges. The application containers can use an RDS JDBC endpoint in place of the local PostgreSQL container. Deployment details are in `deploy/aws/README.md`.
 
 ## A few implementation notes
 
-This is a portfolio-sized system, so there are a couple of deliberate limits:
+This is a portfolio-sized project, and some parts are intentionally limited:
 
-- Kafka events are JSON.
+- Kafka events use JSON.
 - There is no payment service.
-- Shipping uses a locally generated tracking number instead of a carrier API.
-- The event publisher does not use a transactional outbox. For a production system where database/Kafka atomicity is critical, that would be the next thing to add.
-- Redis and Kafka run on the EC2 host in the sample AWS layout. A larger deployment would normally use managed or clustered infrastructure.
+- Shipment tracking numbers are generated locally; there is no carrier API integration.
+- The event publisher does not use a transactional outbox. A production deployment requiring database/Kafka atomicity would need one.
+- The example AWS layout runs Redis and Kafka on the EC2 host. A larger deployment would typically use managed or clustered infrastructure.
 
-More detail is in `docs/ARCHITECTURE.md` and `docs/RESUME_MAPPING.md`.
+See `docs/ARCHITECTURE.md` and `docs/RESUME_MAPPING.md` for more details.
 
 ## Web operations console
 
-The repository also includes a React + TypeScript operations console under `frontend/`. It is designed as a full control surface for the backend rather than a decorative landing page.
+The React/TypeScript console lives in `frontend/` and provides an interface for working with the backend, rather than just a project landing page.
 
-The console includes:
+It includes:
 
-- login and registration with the existing JWT endpoints
-- role-aware operator/admin navigation
-- an order command center with idempotent order creation and live workflow polling
-- inventory cards with add, edit, and safe delete actions for admins
-- fulfillment task inspection with an interactive visualization of the stored A* pick route
-- shipping lookup and tracking cards
-- live health checks for all four Spring Boot services
-- a Kafka/service topology view
-- global search across orders, SKUs, and tracking data
+- Login and registration through the existing JWT endpoints
+- Role-aware operator/admin navigation
+- Order creation with idempotency keys and live workflow polling
+- Inventory cards with add, edit, and safe delete actions for admins
+- Fulfillment task details and an interactive view of the stored A* picking route
+- Shipment lookup and tracking cards
+- Health checks for all four Spring Boot services
+- A Kafka/service topology view
+- Search across orders, SKUs, and tracking data
 
-The layout uses a dense commerce/operations pattern: dark navigation, a central search bar, compact tables, strong blue hierarchy, and small warm accent colors for high-value actions.
+The interface uses dark navigation, a central search bar, compact tables, blue visual hierarchy, and warm accents for primary actions.
 
 ### Run the frontend
 
-Node.js 20+ is enough. No CORS changes are required because Vite proxies each API family to the correct local Spring service.
+Use Node.js 20 or later. Vite proxies each API group to its local Spring service, so no additional CORS changes are needed.
 
 ```bash
 cd frontend
@@ -261,7 +288,7 @@ Open:
 http://localhost:5173
 ```
 
-Keep the existing local infrastructure and Spring services running:
+Keep the infrastructure and Spring services running on these ports:
 
 ```text
 order-service       8081
@@ -270,15 +297,15 @@ fulfillment-service 8083
 shipping-service    8084
 ```
 
-For the richest view, use the seeded admin account:
+To access the admin controls, use:
 
 ```text
 admin@fulfillmesh.local / admin12345
 ```
 
-A regular user can still create and track their own orders and read inventory, while inventory mutation and fleet-wide fulfillment/shipment lists remain admin-only.
+Regular users can create and track their own orders and view inventory. Inventory changes and system-wide fulfillment/shipment lists are restricted to admins.
 
-Frontend production build:
+Build the frontend for production with:
 
 ```bash
 make frontend-build

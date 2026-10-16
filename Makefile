@@ -1,4 +1,4 @@
-.PHONY: infra-up infra-down reset test coverage docker-up docker-down demo frontend-install frontend frontend-build
+.PHONY: local-up benchmark-routing infra-up infra-down reset test coverage docker-up docker-down demo frontend-install frontend frontend-build
 
 infra-up:
 	./scripts/infra-up.sh
@@ -32,3 +32,9 @@ frontend:
 
 frontend-build:
 	cd frontend && npm run build
+
+local-up:
+	./scripts/local-up.sh
+
+benchmark-routing:
+	./scripts/benchmark-routing.sh

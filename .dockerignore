@@ -1,0 +1,11 @@
+.git
+.idea
+.run
+**/target
+frontend/node_modules
+frontend/dist
+frontend/*.tsbuildinfo
+.benchmark-classes
+reports
+.env
+*.log

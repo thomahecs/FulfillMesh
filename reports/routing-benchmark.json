@@ -1,0 +1,14 @@
+{
+  "experiment": "A* shortest paths plus Held-Karp (up to 10 picks), 2-opt fallback",
+  "generator": "18-22 distinct walkable cells; aisle-sorted sequential baseline",
+  "seed": 20261016,
+  "orders": 10000,
+  "sequential_total_steps": 1865602,
+  "nearest_neighbor_total_steps": 1255014,
+  "optimized_total_steps": 1098176,
+  "reduction_vs_nearest_percent": 12.4969,
+  "reduction_vs_sequential_percent": 41.1356,
+  "orders_improved_vs_nearest": 9436,
+  "orders_improved_vs_sequential": 10000,
+  "runtime_ms": 3603
+}

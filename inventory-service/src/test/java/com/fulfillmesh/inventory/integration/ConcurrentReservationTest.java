@@ -36,7 +36,11 @@ class ConcurrentReservationTest {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl() + "&currentSchema=inventory");
+        registry.add("spring.datasource.url", () -> {
+            String jdbcUrl = POSTGRES.getJdbcUrl();
+            String separator = jdbcUrl.contains("?") ? "&" : "?";
+            return jdbcUrl + separator + "currentSchema=inventory";
+        });
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("app.jwt.secret", () -> "integration-test-secret-that-is-long-enough-123456");

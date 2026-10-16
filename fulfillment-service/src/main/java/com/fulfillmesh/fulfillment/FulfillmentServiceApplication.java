@@ -5,7 +5,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class FulfillmentServiceApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(FulfillmentServiceApplication.class, args);
+    public static void main(String[] args) {SpringApplication.run(FulfillmentServiceApplication.class, args);
     }
 }

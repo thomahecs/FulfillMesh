@@ -27,3 +27,6 @@ frontend/.env.local
 frontend/*.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
+
+# Standalone routing benchmark compiler output
+.benchmark-classes/

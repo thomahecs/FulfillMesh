@@ -1,0 +1,13 @@
+{
+  "type": "PostgreSQL row-lock integration test",
+  "requests": 500,
+  "initial_stock": 100,
+  "client_threads": 48,
+  "db_pool_size": 32,
+  "successful_reservations": 100,
+  "rejected_reservations": 400,
+  "remaining_stock": 0,
+  "oversells": 0,
+  "service_p95_ms": 67.701,
+  "end_to_end_p95_ms": 286.440
+}

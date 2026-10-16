@@ -43,11 +43,15 @@ class InfrastructureSmokeTest {
 
     @Container
     static final KafkaContainer KAFKA =
-            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.8.0"));
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.8.11"));
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl() + "&currentSchema=orders");
+        registry.add("spring.datasource.url", () -> {
+            String jdbcUrl = POSTGRES.getJdbcUrl();
+            String separator = jdbcUrl.contains("?") ? "&" : "?";
+            return jdbcUrl + separator + "currentSchema=orders";
+        });
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.data.redis.host", REDIS::getHost);
